@@ -23,15 +23,25 @@ public class AuthService {
     }
 
     public UserResponse register(RegisterRequest req) {
-        if (userRepository.existsByUsername(req.username())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username đã tồn tại");
+        String username = req.username().trim();
+        String email = req.email().trim();
+
+        if (username.length() < 3) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tài khoản phải có ít nhất 3 ký tự");
         }
-        if (userRepository.existsByEmail(req.email())) {
+        if (!req.password().equals(req.confirmPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mật khẩu xác nhận không khớp");
+        }
+        if (userRepository.existsByUsername(username)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tên đăng nhập đã tồn tại");
+        }
+        if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email đã tồn tại");
         }
+
         User u = new User();
-        u.setUsername(req.username());
-        u.setEmail(req.email());
+        u.setUsername(username);
+        u.setEmail(email);
         u.setPassword(passwordEncoder.encode(req.password()));
         u.setRole(Role.USER);
         u = userRepository.save(u);
