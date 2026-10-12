@@ -17,3 +17,14 @@ Gateway 8080 | Auth 8081 | Movie 8082 | Showtime 8083 | Booking 8084 | Frontend 
 - TV1: Auth, Gateway
 - TV2: Movie, Showtime
 - TV3: Booking, Frontend
+
+## Additional services
+
+The notification and payment services are Maven modules at:
+
+- `notification-service` (port 8086)
+- `payment-service` (port 8085)
+
+Run `db/init.sql` again as a MySQL administrator to create their databases and users. Then reload Maven and start `NotificationServiceApplication` and `PaymentServiceApplication`. The API Gateway routes authenticated requests under `/api/notifications/**` and `/api/payments/**`.
+
+Booking confirmation now uses Payment Service; confirmed bookings receive a reminder through Notification Service up to `REMINDER_MINUTES` before showtime (default 60 minutes).

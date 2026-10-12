@@ -32,3 +32,11 @@ spring:
           uri: ${BOOKING_URL:http://localhost:8084}
           predicates:
             - Path=/api/bookings/**
+        - id: notification-service
+          uri: ${NOTIFICATION_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/notifications/**
+        - id: payment-service
+          uri: ${PAYMENT_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/payments/**

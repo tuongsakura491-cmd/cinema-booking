@@ -6,6 +6,7 @@ import MovieDetail from './pages/MovieDetail';
 import SeatPicker from './pages/SeatPicker';
 import MyBookings from './pages/MyBookings';
 import Admin from './pages/Admin';
+import NotificationBell from './components/NotificationBell';
 function Navbar() {
   useLocation(); // render lại khi chuyển trang để cập nhật trạng thái đăng nhập
   const nav = useNavigate();
@@ -18,6 +19,7 @@ function Navbar() {
           {user ? (
               <>
                   {user?.role === 'ADMIN' && <Link to="/admin">Quản trị</Link>}
+                <NotificationBell />
                 <Link to="/bookings">Vé của tôi</Link>
                 <span className="muted">{user.username} ({user.role})</span>
                 <button className="btn small" onClick={logout}>Đăng xuất</button>

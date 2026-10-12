@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react';
 import api, { errMsg, fmt, money } from '../api';
+import PayPanel from '../components/PayPanel';
 
 const LABEL = {
-    PENDING: 'Chờ xác nhận', CONFIRMED: 'Đã đặt', CANCELLED: 'Đã hủy', EXPIRED: 'Hết hạn', FAILED: 'Thất bại',
+    PENDING: 'Chờ thanh toán', CONFIRMED: 'Đã đặt', CANCELLED: 'Đã hủy', EXPIRED: 'Hết hạn', FAILED: 'Thất bại',
 };
 
 export default function MyBookings() {
     const [list, setList] = useState([]);
     const [msg, setMsg] = useState('');
+    const [payingId, setPayingId] = useState(null);
 
     const load = () => api.get('/api/bookings/my').then((r) => setList(r.data)).catch((e) => setMsg(errMsg(e)));
     useEffect(() => { load(); }, []);
 
-    const act = async (id, action) => {
+    const cancel = async (id) => {
         setMsg('');
-        try { await api.post(`/api/bookings/${id}/${action}`); } catch (e) { setMsg(errMsg(e)); }
+        try { await api.post(`/api/bookings/${id}/cancel`); } catch (e) { setMsg(errMsg(e)); }
         load();
     };
 
@@ -34,11 +36,22 @@ export default function MyBookings() {
                     <p className="muted">{b.cinemaName} · {b.roomName} · {fmt(b.startTime)}</p>
                     <p>Ghế: <b>{b.seats.map((s) => s.label).join(', ')}</b> · Tổng: <b>{money(b.totalPrice)}</b></p>
                     <div className="row">
-                        {b.status === 'PENDING' && <button className="btn small" onClick={() => act(b.id, 'confirm')}>Xác nhận</button>}
+                        {b.status === 'PENDING' && (
+                            <button className="btn small" onClick={() => setPayingId(payingId === b.id ? null : b.id)}>
+                                {payingId === b.id ? 'Đóng' : 'Thanh toán'}
+                            </button>
+                        )}
                         {(b.status === 'PENDING' || b.status === 'CONFIRMED') && (
-                            <button className="btn small ghost" onClick={() => act(b.id, 'cancel')}>Hủy vé</button>
+                            <button className="btn small ghost" onClick={() => cancel(b.id)}>
+                                {b.status === 'CONFIRMED' ? 'Hủy vé (hoàn tiền)' : 'Hủy'}
+                            </button>
                         )}
                     </div>
+                    {payingId === b.id && (
+                        <PayPanel booking={b}
+                                  onPaid={() => { setPayingId(null); load(); }}
+                                  onExpired={() => { setPayingId(null); setMsg('Booking đã hết hạn giữ ghế.'); load(); }} />
+                    )}
                 </div>
             ))}
         </>

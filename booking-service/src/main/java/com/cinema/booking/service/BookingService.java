@@ -1,9 +1,12 @@
 package com.cinema.booking.service;
 
 import com.cinema.booking.client.HoldResult;
+import com.cinema.booking.client.PaymentClient;
+import com.cinema.booking.client.PaymentResult;
 import com.cinema.booking.client.ShowtimeClient;
 import com.cinema.booking.dto.BookingResponse;
 import com.cinema.booking.dto.CreateBookingRequest;
+import com.cinema.booking.dto.PayInfo;
 import com.cinema.booking.dto.SeatItem;
 import com.cinema.booking.entity.Booking;
 import com.cinema.booking.entity.BookingSeat;
@@ -14,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -28,18 +32,20 @@ public class BookingService {
     private final BookingRepository bookingRepo;
     private final BookingSeatRepository seatRepo;
     private final ShowtimeClient showtimeClient;
+    private final PaymentClient paymentClient;
     private final long cancelMinHoursBefore;
 
     public BookingService(BookingRepository bookingRepo, BookingSeatRepository seatRepo,
-                          ShowtimeClient showtimeClient,
+                          ShowtimeClient showtimeClient, PaymentClient paymentClient,
                           @Value("${booking.cancel-min-hours-before}") long cancelMinHoursBefore) {
         this.bookingRepo = bookingRepo;
         this.seatRepo = seatRepo;
         this.showtimeClient = showtimeClient;
+        this.paymentClient = paymentClient;
         this.cancelMinHoursBefore = cancelMinHoursBefore;
     }
 
-    // ================= TẠO BOOKING =================
+    // ================= TẠO BOOKING (giữ nguyên) =================
     public BookingResponse create(Long userId, CreateBookingRequest req) {
         List<Long> seatIds = req.seatIds().stream().distinct().toList();
 
@@ -93,8 +99,8 @@ public class BookingService {
         return toResponse(b);
     }
 
-    // ================= XÁC NHẬN =================
-    public BookingResponse confirm(Long userId, Long bookingId) {
+    // ================= XÁC NHẬN = THANH TOÁN + CHỐT GHẾ =================
+    public BookingResponse confirm(Long userId, Long bookingId, PayInfo pay) {
         Booking b = findOwned(userId, bookingId);
         expireIfNeeded(b);
 
@@ -107,15 +113,40 @@ public class BookingService {
         if (b.getStatus() != BookingStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking ở trạng thái " + b.getStatus() + ", không thể xác nhận");
         }
+        if (b.getTotalPrice() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Booking chưa có thông tin giá");
+        }
 
+        // Bước 1: thanh toán. Số tiền lấy từ booking_db, KHÔNG nhận từ client.
+        // Payment idempotent theo bookingId nên gọi lại sau lỗi mạng không trừ tiền hai lần.
+        PaymentResult pr = paymentClient.pay(b.getId(), userId, b.getTotalPrice(), pay);
+        if ("REFUNDED".equals(pr.status())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Giao dịch của booking này đã được hoàn tiền");
+        }
+        if (!"SUCCESS".equals(pr.status())) {
+            // Thanh toán thất bại: booking vẫn PENDING, còn thời gian giữ ghế thì người dùng thử lại được
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    pr.message() != null ? pr.message() : "Thanh toán không thành công");
+        }
+        if (!b.isPaid()) {
+            bookingRepo.markPaid(b.getId());
+            b.setPaid(true);
+        }
+
+        // Bước 2: chốt ghế. Nếu lỗi sau khi đã thu tiền thì phải bù trừ.
         try {
             showtimeClient.confirm(b.getId());
         } catch (ResponseStatusException e) {
             if (e.getStatusCode().value() == 410) {
-                b.setStatus(BookingStatus.EXPIRED);
-                bookingRepo.save(b);
+                // Đã trả tiền nhưng ghế hết hạn/mất => hoàn tiền rồi đóng booking
+                if (tryRefund(b)) {
+                    b.setPaid(false);
+                    b.setStatus(BookingStatus.EXPIRED);
+                    bookingRepo.save(b);
+                }
             }
-            // 503/502: giữ nguyên PENDING để người dùng thử lại (confirm của Showtime là idempotent)
+            // 503/502: giữ nguyên PENDING + paid. Người dùng bấm lại: pay trả SUCCESS cũ (không trừ thêm),
+            // confirm ghế được gọi lại (idempotent). Nếu quá hạn thì expireIfNeeded sẽ hoàn tiền.
             throw e;
         }
         b.setStatus(BookingStatus.CONFIRMED);
@@ -140,7 +171,12 @@ public class BookingService {
                     "Chỉ được hủy vé trước giờ chiếu " + cancelMinHoursBefore + " tiếng");
         }
 
-        // Nhả ghế trước; nếu lỗi thì ném exception, booking giữ nguyên trạng thái
+        // Thứ tự an toàn: HOÀN TIỀN trước, rồi mới nhả ghế. Cả hai bước đều idempotent.
+        // Lỗi ở bước nào cũng ném exception, booking giữ nguyên trạng thái, người dùng bấm hủy lại được.
+        if (b.isPaid()) {
+            paymentClient.refund(b.getId());
+            b.setPaid(false);
+        }
         showtimeClient.release(b.getId());
         b.setStatus(BookingStatus.CANCELLED);
         b.setHoldExpiresAt(null);
@@ -161,7 +197,8 @@ public class BookingService {
     }
 
     // ================= HẾT HẠN =================
-    /** Job dọn: chuyển PENDING quá hạn thành EXPIRED và nhả ghế. */
+    /** Job dọn: chuyển PENDING quá hạn thành EXPIRED và nhả ghế (đã bật @Scheduled). */
+    @Scheduled(fixedDelay = 30_000, initialDelay = 20_000)
     public void expireOverdue() {
         List<Booking> overdue = bookingRepo.findByStatusAndHoldExpiresAtBefore(BookingStatus.PENDING, LocalDateTime.now());
         overdue.forEach(this::expireIfNeeded);
@@ -170,6 +207,12 @@ public class BookingService {
     private void expireIfNeeded(Booking b) {
         if (b.getStatus() == BookingStatus.PENDING && b.getHoldExpiresAt() != null
                 && b.getHoldExpiresAt().isBefore(LocalDateTime.now())) {
+            // Nếu đã thu tiền mà không chốt được ghế thì phải hoàn tiền trước khi đóng booking.
+            // Hoàn chưa được => giữ PENDING, job 30 giây sau thử lại (không để mất tiền người dùng).
+            if (b.isPaid()) {
+                if (!tryRefund(b)) return;
+                b.setPaid(false);
+            }
             b.setStatus(BookingStatus.EXPIRED);
             bookingRepo.save(b);
             safeRelease(b.getId());
@@ -185,6 +228,16 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy booking");
         }
         return b;
+    }
+
+    private boolean tryRefund(Booking b) {
+        try {
+            paymentClient.refund(b.getId());
+            return true;
+        } catch (RuntimeException e) {
+            log.error("Hoàn tiền booking {} thất bại, sẽ thử lại: {}", b.getId(), e.getMessage());
+            return false;
+        }
     }
 
     private void markFailed(Booking b) {

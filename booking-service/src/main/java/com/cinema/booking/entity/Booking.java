@@ -32,6 +32,14 @@ public class Booking {
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // Đã nhắc giờ chiếu qua Notification Service chưa (tính năng nhắc giờ)
+    @Column(nullable = false)
+    private boolean reminderSent = false;
+
+    // Đã thu tiền thành công chưa (cần để hoàn tiền khi hủy / hết hạn)
+    @Column(nullable = false)
+    private boolean paid = false;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getUserId() { return userId; }
@@ -54,4 +62,8 @@ public class Booking {
     public void setHoldExpiresAt(LocalDateTime holdExpiresAt) { this.holdExpiresAt = holdExpiresAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public boolean isReminderSent() { return reminderSent; }
+    public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
+    public boolean isPaid() { return paid; }
+    public void setPaid(boolean paid) { this.paid = paid; }
 }

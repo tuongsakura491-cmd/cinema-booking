@@ -20,6 +20,8 @@
         <module>movie-service</module>
         <module>showtime_db</module>
         <module>booking-service</module>
+        <module>notification-service</module>
+        <module>payment-service</module>
     </modules>
 
     <properties>

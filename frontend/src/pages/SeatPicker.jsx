@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api, { errMsg, fmt, money } from '../api';
+import PayPanel from '../components/PayPanel';
 
 export default function SeatPicker() {
     const { id } = useParams();
@@ -77,23 +78,12 @@ export default function SeatPicker() {
         }
     };
 
-    const confirm = async () => {
-        setBusy(true);
-        try {
-            await api.post(`/api/bookings/${booking.id}/confirm`);
-            nav('/bookings');
-        } catch (e) {
-            if (e.response?.status === 410) {
-                setMsg('Đã hết hạn giữ ghế, vui lòng chọn lại.');
-                setBooking(null);
-                setSel([]);
-                loadSeats();
-            } else {
-                setMsg(errMsg(e));
-            }
-        } finally {
-            setBusy(false);
-        }
+    // Thanh toán (PayPanel) báo lại khi hết hạn giữ ghế
+    const onExpired = () => {
+        setMsg('Đã hết hạn giữ ghế, vui lòng chọn lại. Nếu đã bị trừ tiền, hệ thống sẽ hoàn lại.');
+        setBooking(null);
+        setSel([]);
+        loadSeats();
     };
 
     const cancel = async () => {
@@ -158,9 +148,9 @@ export default function SeatPicker() {
                     <h3>Đã giữ ghế: {booking.seats.map((s) => s.label).join(', ')}</h3>
                     <p>Tổng tiền: <b>{money(booking.totalPrice)}</b></p>
                     <p className="timer">Thời gian giữ ghế còn lại: {mm}:{ss}</p>
-                    <div className="row">
-                        <button className="btn" disabled={busy} onClick={confirm}>Xác nhận đặt vé</button>
-                        <button className="btn ghost" disabled={busy} onClick={cancel}>Hủy</button>
+                    <PayPanel booking={booking} onPaid={() => nav('/bookings')} onExpired={onExpired} />
+                    <div className="row" style={{ marginTop: 12 }}>
+                        <button className="btn ghost" onClick={cancel}>Hủy giữ ghế</button>
                     </div>
                 </div>
             )}

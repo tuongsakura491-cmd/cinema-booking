@@ -148,6 +148,31 @@ input:focus, select:focus, textarea:focus {
 .password-toggle:hover { color: #fff; }
 .password-toggle svg { display: block; width: 100%; height: 100%; }
 
+.pay-panel { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+.pay-methods { display: flex; gap: 8px; flex-wrap: wrap; }
+.pay-method { padding: 10px 16px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 14px; background: #0d1118; color: #d1d5db; border: 1px solid #2a3447; }
+.pay-method:hover { border-color: #4b5563; }
+.pay-method.active { border-color: #e50914; background: rgba(229,9,20,0.1); color: #fff; }
+.pay-method:focus-visible { outline: 2px solid #e50914; outline-offset: 1px; }
+.pay-field { display: flex; flex-direction: column; gap: 6px; max-width: 260px; }
+.muted-note { color: #9ca3af; font-size: 12px; }
+
+.bell { position: relative; }
+.bell-btn { position: relative; width: 40px; height: 40px; display: grid; place-items: center; background: none; border: 0; border-radius: 10px; cursor: pointer; color: #d1d5db; }
+.bell-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.bell-btn:focus-visible { outline: 2px solid #e50914; outline-offset: 1px; }
+.bell-badge { position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #e50914; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+.bell-menu { position: absolute; right: 0; top: 48px; width: 340px; max-height: 420px; overflow-y: auto; background: #141a23; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,0.5); z-index: 1100; }
+.bell-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.bell-empty { padding: 18px 14px; margin: 0; color: #9ca3af; font-size: 14px; }
+.bell-item { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: default; }
+.bell-item.unread { background: rgba(229,9,20,0.08); border-left: 3px solid #e50914; cursor: pointer; }
+.bell-title { font-weight: 600; font-size: 14px; }
+.bell-text { font-size: 13px; color: #d1d5db; margin-top: 4px; line-height: 1.45; }
+.bell-time { font-size: 12px; color: #9ca3af; margin-top: 6px; }
+.reminder-banner { position: fixed; top: 76px; right: 24px; z-index: 2000; max-width: 380px; display: flex; gap: 14px; align-items: center; background: #141a23; border: 1px solid #e50914; border-radius: 12px; padding: 14px 16px; box-shadow: 0 16px 40px rgba(0,0,0,0.55); font-size: 14px; line-height: 1.45; }
+@media (max-width: 600px) { .reminder-banner { left: 12px; right: 12px; max-width: none; } .bell-menu { position: fixed; left: 12px; right: 12px; width: auto; top: 70px; } }
+
 label { display: flex; flex-direction: column; gap: 8px; font-size: 14px; font-weight: 500; color: #9ca3af; flex: 1; }
 
 .link { color: #38bdf8; cursor: pointer; font-size: 14px; font-weight: 500; }

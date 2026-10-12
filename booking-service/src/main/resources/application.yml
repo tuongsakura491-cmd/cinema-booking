@@ -23,5 +23,14 @@ internal:
 showtime:
   url: ${SHOWTIME_URL:http://localhost:8083}
 
+payment:
+  url: ${PAYMENT_URL:http://localhost:8085}
+
+notification:
+  url: ${NOTIFICATION_URL:http://localhost:8086}
+
+reminder:
+  minutes-before: ${REMINDER_MINUTES:60}
+
 booking:
   cancel-min-hours-before: 2

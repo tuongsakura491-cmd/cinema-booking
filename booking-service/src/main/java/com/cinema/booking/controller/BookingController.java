@@ -2,6 +2,7 @@ package com.cinema.booking.controller;
 
 import com.cinema.booking.dto.BookingResponse;
 import com.cinema.booking.dto.CreateBookingRequest;
+import com.cinema.booking.dto.PayInfo;
 import com.cinema.booking.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -35,9 +36,11 @@ public class BookingController {
         return service.get(userId, id);
     }
 
+    // Xác nhận = thanh toán + chốt ghế. Body (PayInfo) có thể bỏ trống, khi đó dùng mặc định.
     @PostMapping("/{id}/confirm")
-    public BookingResponse confirm(@RequestHeader("X-User-Id") Long userId, @PathVariable Long id) {
-        return service.confirm(userId, id);
+    public BookingResponse confirm(@RequestHeader("X-User-Id") Long userId, @PathVariable Long id,
+                                   @Valid @RequestBody(required = false) PayInfo pay) {
+        return service.confirm(userId, id, pay);
     }
 
     @PostMapping("/{id}/cancel")
