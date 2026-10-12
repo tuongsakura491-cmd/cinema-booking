@@ -29,8 +29,5 @@ payment:
 notification:
   url: ${NOTIFICATION_URL:http://localhost:8086}
 
-reminder:
-  minutes-before: ${REMINDER_MINUTES:60}
-
 booking:
   cancel-min-hours-before: 2

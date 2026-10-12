@@ -17,14 +17,22 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByStatusAndHoldExpiresAtBefore(BookingStatus status, LocalDateTime time);
 
-    // Nhắc giờ chiếu
-    List<Booking> findByStatusAndReminderSentFalseAndStartTimeBetween(
-            BookingStatus status, LocalDateTime from, LocalDateTime to);
+    // Các booking còn mốc nhắc chưa gửi và đã vào cửa sổ 60 phút trước giờ chiếu.
+    List<Booking> findByStatusAndStartTimeLessThanEqualAndReminderStageLessThan(
+            BookingStatus status, LocalDateTime to, int stage);
 
     @Transactional
     @Modifying
-    @Query("update Booking b set b.reminderSent = true where b.id = :id")
-    int markReminderSent(@Param("id") Long id);
+    @Query("update Booking b set b.reminderStage = :stage, b.reminderSent = true " +
+            "where b.id = :id and b.reminderStage = :previousStage")
+    int advanceReminderStage(@Param("id") Long id, @Param("previousStage") int previousStage,
+                             @Param("stage") int stage);
+
+    @Transactional
+    @Modifying
+    @Query("update Booking b set b.reminderStage = 1 where b.id = :id " +
+            "and b.reminderStage = 0 and b.reminderSent = true")
+    int migrateLegacyReminder(@Param("id") Long id);
 
     // Thanh toán: đánh dấu đã thu tiền (chỉ đụng 1 cột)
     @Transactional

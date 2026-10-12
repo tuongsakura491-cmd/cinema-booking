@@ -24,4 +24,4 @@ movie:
   url: ${MOVIE_URL:http://localhost:8082}
 
 hold:
-  seconds: 1200
+  seconds: 30

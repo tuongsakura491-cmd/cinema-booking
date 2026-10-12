@@ -32,7 +32,11 @@ public class Booking {
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    // Đã nhắc giờ chiếu qua Notification Service chưa (tính năng nhắc giờ)
+    // Số mốc nhắc đã gửi: 0=chưa gửi, 1=60p, 2=30p, 3=15p, 4=đến giờ chiếu
+    @Column(nullable = false)
+    private int reminderStage = 0;
+
+    // Giữ lại để tương thích với dữ liệu/các phiên bản cũ.
     @Column(nullable = false)
     private boolean reminderSent = false;
 
@@ -64,6 +68,8 @@ public class Booking {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public boolean isReminderSent() { return reminderSent; }
     public void setReminderSent(boolean reminderSent) { this.reminderSent = reminderSent; }
+    public int getReminderStage() { return reminderStage; }
+    public void setReminderStage(int reminderStage) { this.reminderStage = reminderStage; }
     public boolean isPaid() { return paid; }
     public void setPaid(boolean paid) { this.paid = paid; }
 }

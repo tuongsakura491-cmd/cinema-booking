@@ -32,7 +32,7 @@ public class NotificationClient {
         body.put("title", title);
         body.put("content", content);
         body.put("dedupeKey", dedupeKey);
-        body.put("expiresAt", expiresAt.toString());   // ISO-8601
+        body.put("expiresAt", expiresAt == null ? null : expiresAt.toString()); // ISO-8601; null means no expiry
 
         client.post()
                 .uri("/internal/notifications")
